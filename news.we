@@ -1,0 +1,86 @@
+<template>
+  <div class="wrapper">
+     <wxc-navpage></wxc-navpage>
+     <web class="web" src="{{news.share_url}}" style="height:{{height}};" onpagestart="pagestart" onpagefinish="pagefinish" onerror="error"></web>
+ </div>
+</template>
+<style>
+.text{
+      font-size:26;
+  }
+  .web{
+      flex:1;
+  }
+</style>
+
+<script>
+    require('./components/wxc-navpage.we');
+    var modal = require('@weex-module/modal');
+    var stream = require('@weex-module/stream');
+    var navigator = require('@weex-module/navigator');
+
+    function getData(url, callback) {
+        stream.sendHttp({
+            method: 'GET',
+            url: url
+        }, function (ret) {
+            callback(JSON.parse(ret));
+        });
+    }
+
+    module.exports = {
+        data: {
+          newsId:0,
+          width: 0,
+          height: 0,
+          news:{}
+        },
+        created: function () {
+            var self = this;
+            var config  = this.$getConfig();
+            this.width = config.env.deviceWidth;
+            this.height = config.env.deviceHeight;
+
+            var bundleUrl = this.$getConfig().bundleUrl;
+            this.newsId = self.getParameterByName('id', bundleUrl);
+            if (this.newsId.lastIndexOf('?') != -1) {
+                this.newsId = this.newsId.substr(0, contentId.lastIndexOf('?'));
+            }
+            //获取参数
+          // modal.toast({'message': 'hide me!' + this.newsId, 'duration': 1});
+          self.getNews(this.newsId);
+          this.$on('naviBar.leftItem.click',function(e){
+              //pop back
+              var params = {
+                  'animated' : 'true',
+              }
+              navigator.pop(params, function(e) {});
+          });
+        },
+        methods: {
+          pagestart: function(){
+                //TODO: loading
+            },
+            pagefinish: function(){
+                //TODO: close loading
+            },
+            error: function(){
+                //TODO: show infowindow
+            },
+            getParameterByName: function (name, url) {
+                name = name.replace(/[\[\]]/g, "\\$&");
+                var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
+                        results = regex.exec(url);
+                if (!results) return null;
+                if (!results[2]) return '';
+                return decodeURIComponent(results[2].replace(/\+/g, " "));
+            },
+            getNews: function(id){
+              var self = this;
+              getData('http://news-at.zhihu.com/api/4/news/' + id, function(ret){
+                  self.news = ret;
+              });
+            }
+        }
+    }
+</script>

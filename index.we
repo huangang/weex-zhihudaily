@@ -1,0 +1,133 @@
+<template>
+  <scroller style="margin-top:10;">
+    <div repeat="{{news.stories}}" class="row-item" onclick="gotoView(id)" title="{{title}}" >
+      <div class="row">
+        <div class="img_view">
+          <image class="img" src="{{images[0]}}" resize="cover"></image>
+        </div>
+        <div style="flex:1;">
+          <text class="title">{{title}}</text>
+        </div>
+      </div>
+    </scroller>
+</template>
+
+<style>
+.row{flex-direction: row;}
+.row-item{
+    height:150;
+    border-bottom-width:1;
+    border-bottom-color:#E0E0E0;
+    border-radius: 25;
+    border:2 solid;
+}
+.img_view{
+    width:150;
+    height:150;
+    border-radius: 25;
+}
+.img{
+    width:130;
+    height:130;
+    margin-left:10;
+    margin-right:10;
+    margin-top:10;
+    border-radius:4;
+}
+.title{
+    font-size:40;
+    lines:3;
+    text-overflow: ellipsis;
+    margin-right:10;
+    margin-top:10;
+}
+</style>
+
+<script>
+  require('weex-components');
+  var stream = require('@weex-module/stream');
+  var modal = require('@weex-module/modal');
+  var navigator = require('@weex-module/navigator');
+  function getData(url, callback) {
+      stream.sendHttp({
+          method: 'GET',
+          url: url
+      }, function (ret) {
+          callback(JSON.parse(ret));
+      });
+  };
+
+  module.exports = {
+    data: {
+      news:{stories:[]},
+      baseURL:'',
+      title: '',
+      titleAdd:'',
+      dir: 'examples'
+    },
+    ready: function () {
+      var url = this.$getConfig().bundleUrl;
+      this.title = decodeURIComponent(this._getUrlParam(url, 'title'));
+
+      this.$on('naviBar.leftItem.click',function(e){
+          //pop back
+          var params = {
+              'animated' : 'true',
+          }
+          var navigator = require('@weex-module/navigator');
+          navigator.pop(params, function(e) {});
+      });
+
+      var bundleUrl = url;
+      bundleUrl = new String(bundleUrl);
+
+      var nativeBase;
+      var isAndroidAssets = bundleUrl.indexOf('file://assets/') >= 0;
+
+      var isiOSAssets = bundleUrl.indexOf('file:///') >= 0 && bundleUrl.indexOf('WeexDemo.app') > 0;
+      if (isAndroidAssets) {
+        nativeBase = 'file://assets/';
+      }
+      else if (isiOSAssets) {
+        nativeBase = bundleUrl.substring(0, bundleUrl.lastIndexOf('/') + 1);
+      }
+      else {
+        var host = 'localhost:12580';
+        var matches = /\/\/([^\/]+?)\//.exec(this.$getConfig().bundleUrl);
+        if (matches && matches.length >= 2) {
+          host = matches[1];
+        }
+        nativeBase = 'http://' + host + '/' + this.dir + '/build/';
+      }
+      var h5Base = './index.html?page=./' + this.dir + '/build/';
+      //Native端
+      var base = nativeBase;
+      //H5端
+      if (typeof window === 'object') {
+        base = h5Base;
+      }
+      this.baseURL = base;
+      this.getNewsList();
+    },
+    methods:{
+      getNewsList:function(){
+        var self = this;
+        getData('http://news-at.zhihu.com/api/4/news/latest', function(ret){
+            self.news = ret;
+        });
+      },
+      _getUrlParam: function(url, key){
+          var reg = new RegExp('[?|&]' + key + '=([^&]+)');
+          var match = url.match(reg);
+          return match && match[1];
+      },
+      gotoView: function(id) {
+        var params = {
+            'url': this.baseURL + 'news.js?id=' + id,
+            'animated' : 'true',
+        }
+        navigator.push(params, function(e) {});
+      }
+    }
+  }
+</script>
